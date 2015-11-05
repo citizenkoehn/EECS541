@@ -18,20 +18,19 @@ Stepper myStepper(stepsPerRevolution, 8,9,10,11);
 const int startPin = 12;
 int start = 0;
 
+// Keyframe structure
 struct keyframe {
-  int location;
-  int swivelAngle;
-  int tiltAngle;
+  int location;      // absolute position, left most = 0 and right-most = ???
+  int swivelAngle;   // Like polar Phi
+  int tiltAngle;     // Like polar Theta
+  int time;          // absolute time
 };
 
-struct transition {
-  keyframe keyframe1;
-  keyframe keyframe2;
-  int time; // seconds
-};
+// Array of keyframes
+keyframe keyframes[10];
 
 void setup() {
-  // transition initated by user
+  // transitiodn initated by user
   pinMode(startPin, INPUT);
   // argument for setSpeed is what needs to be modified. 0 for no movement.
   myStepper.setSpeed(60);
@@ -40,22 +39,29 @@ void setup() {
 }
 
 void loop() {
-  start = digitalRead(startPin);
   
-  if (start == HIGH) {
-    // step one revolution in one direction:
-    Serial.println("clockwise");
-    myStepper.step(stepsPerRevolution);
+  // Batch of keyframes received
+  if start = digitalRead(startPin){
+    // Load keyframe data into local array
+    for(i = 0; i < 10; i++){
+      keyframes.i.location = ;
+      keyframes.i.swivelAngle = ;
+      keyframes.i.tiltAngle = ;
+      keyframes.i.time = ;
+    };
+    // Execute movements
+    for(j = 0; j < 9; j++){
+      k = j + 1;
+      int transitionTime = keyframes.k.time - keyframes.j.time;
+    };
   };
-}
-
-void movement(struct transition trans1) {
-  // Determine distance to travel between keyframes
-  int x1 = trans1.keyframe1.location; 
-  int x2 = trans1.keyframe2.location;
-  int dist = x2 - x1;
-  
-  // move distance "dist" over time "trans1.time"
   
 }
 
+
+/*
+    if (start == HIGH) {
+      // step one revolution in one direction:
+      Serial.println("clockwise");
+      myStepper.step(stepsPerRevolution);
+*/
