@@ -12,7 +12,8 @@
 //
 ////////////////////////////////////////////////////////////////////////
 #include <Stepper.h>
-#define DEBUG 1
+#include <Stream.h>
+#define DEBUG 0
 
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
 Stepper myStepper(stepsPerRevolution, 8,9,10,11);  // Output pins to H-Bridge Driver
@@ -75,40 +76,60 @@ void loop() {
     while(Serial.available() == 0) {
       delay(100); 
     }
-      
-    frameCount = Serial.read();
+    
+    // Serial.read() returns ASCII value: 48 for 0, 49 for 1, etc...
+    frameCount = Serial.parseInt();
     serialKeyFrames = (struct keyframe*) malloc(frameCount * sizeof(struct keyframe));
     
     Serial.print("read frameCount data\n");
     
-    Serial.print(sizeof(struct keyframe));
+    Serial.println(sizeof(struct keyframe));
     
     int numReadFrames = 0;
     int serialBuffer = 0;
     struct keyframe serialFrame;
+    Serial.println(numReadFrames);
+    Serial.println(frameCount);
     while(numReadFrames < frameCount){
-       if(Serial.available() >= sizeof(struct keyframe)){         
+       if(Serial.available() >= sizeof(struct keyframe)){
+         Serial.println(Serial.available());         
          numReadFrames++;
          
          // Read location
-         serialFrame.location = Serial.read();
-         serialFrame.location = (long) serialFrame.location & (Serial.read() << 8);
-         serialFrame.location = (long) serialFrame.location & (Serial.read() << 16);
-         serialFrame.location = (long) serialFrame.location & (Serial.read() << 24);
+         serialFrame.location = Serial.parseFloat();
+//         serialFrame.location = Serial.read()
+//         serialFrame.location = (long) serialFrame.location & (Serial.read() << 8);
+//         serialFrame.location = (long) serialFrame.location & (Serial.read() << 16);
+//         serialFrame.location = (long) serialFrame.location & (Serial.read() << 24);
+         Serial.print("serialFrame.location = ");
+         Serial.print(serialFrame.location);
+         Serial.print("\n");
          
          // swivelAngle
-         serialFrame.swivelAngle = Serial.read();
-         serialFrame.swivelAngle = serialFrame.swivelAngle & (Serial.read() << 8);
+//         serialFrame.swivelAngle = Serial.parseInt();
+//         serialFrame.swivelAngle = Serial.read();
+//         serialFrame.swivelAngle = serialFrame.swivelAngle & (Serial.read() << 8);
+         Serial.print("serialFrame.swivelAngle = ");
+         Serial.println(serialFrame.swivelAngle);
+         Serial.print("\n");
          
          // titleAngle
-         serialFrame.tiltAngle = Serial.read();  
-         serialFrame.tiltAngle = serialFrame.tiltAngle & (Serial.read() << 8);
+//         serialFrame.tiltAngle = Serial.parseInt();
+//         serialFrame.tiltAngle = Serial.read();  
+//         serialFrame.tiltAngle = serialFrame.tiltAngle & (Serial.read() << 8);
+         Serial.print("serialFrame.tiltAngle = ");
+         Serial.println(serialFrame.tiltAngle);
+         Serial.print("\n");
          
          // duration
-         serialFrame.duration = Serial.read();
-         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 8);
-         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 16);
-         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 24);
+//         serialFrame.duration = Serial.parseFloat();
+//         serialFrame.duration = Serial.read();
+//         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 8);
+//         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 16);
+//         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 24);
+         Serial.print("serialFrame.duration = ");         
+         Serial.println(serialFrame.duration);
+         Serial.print("\n");
        }
     }
       
