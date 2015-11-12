@@ -7,13 +7,22 @@
 //
 //	Created on: 10/30/2105
 //	Created by: Pete Koehn, Brandon Teh, and Jim Stanton
-//	Last Modified on: 11/5/2015
-//	Last Modified by: Pete Koehn
+//	Last Modified on: 11/12/2015
+//	Last Modified by: All
+//
+// Test Frames
+// frames             meters                        swiv                         tilt                         time
+//   4z   000.000a00000a00000a000.000a  001.000b00000b00000b010.000  001.500c00000c00000c018.000  002.500d00000d00000d033.000d
+//   4z   000.000a00000a00000a000.000a  002.000b00000b00000b010.000  003.500c00000c00000c020.000  007.500d00000d00000d050.000d
 //
 ////////////////////////////////////////////////////////////////////////
 #include <Stepper.h>
 #include <Stream.h>
-#define DEBUG 0
+#define DEBUG 1
+#define NumDigitsInt 5
+#define NumDigitsFloat 7
+#define NumDigitsKeyFrame ( (2 * NumDigitsInt) + (2 * NumDigitsFloat) + 4) 
+#define NumDigitsFrameCount 2
 
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
 Stepper myStepper(stepsPerRevolution, 8,9,10,11);  // Output pins to H-Bridge Driver
@@ -32,8 +41,8 @@ struct keyframe {
 
 // Array of keyframes: dist in meters, time is absolute (in seconds)
 // Initialized here for testing. Will need to be read from user input
-struct keyframe keyframesTest[3] = {{.2,0,0,0},{.6,0,0,8},{1.4,0,0,13}};
-struct keyframe keyframes[numTransitions];
+//struct keyframe keyframesTest[3] = {{.2,0,0,0},{.6,0,0,8},{1.4,0,0,13}};
+//struct keyframe keyframes[numTransitions];
 
 void setup() {
   // Serial keyframe data input
@@ -69,85 +78,79 @@ void loop() {
   if(startPin == HIGH){
     start = HIGH;
   }
-    
+  
   // Flag allows movement execution
   if(start == HIGH) {
     Serial.print("Reading now\n");
-    while(Serial.available() == 0) {
-      delay(100); 
-    }
-    
-    // Serial.read() returns ASCII value: 48 for 0, 49 for 1, etc...
-    frameCount = Serial.parseInt();
-    serialKeyFrames = (struct keyframe*) malloc(frameCount * sizeof(struct keyframe));
+    unsigned int frameCount = 0;  
+    while(frameCount == 0) {
+        if(Serial.available() == NumDigitsFrameCount){
+          frameCount = Serial.parseInt();       
+        }
+    }    
+    struct keyframe *keyFrames = (struct keyframe*) malloc(frameCount * sizeof(struct keyframe));
     
     Serial.print("read frameCount data\n");
     
-    Serial.println(sizeof(struct keyframe));
-    
     int numReadFrames = 0;
-    int serialBuffer = 0;
     struct keyframe serialFrame;
-    Serial.println(numReadFrames);
-    Serial.println(frameCount);
+
     while(numReadFrames < frameCount){
-       if(Serial.available() >= sizeof(struct keyframe)){
-         Serial.println(Serial.available());         
-         numReadFrames++;
+      
+       if(Serial.available() >= NumDigitsKeyFrame){ 
          
          // Read location
          serialFrame.location = Serial.parseFloat();
-//         serialFrame.location = Serial.read()
-//         serialFrame.location = (long) serialFrame.location & (Serial.read() << 8);
-//         serialFrame.location = (long) serialFrame.location & (Serial.read() << 16);
-//         serialFrame.location = (long) serialFrame.location & (Serial.read() << 24);
          Serial.print("serialFrame.location = ");
-         Serial.print(serialFrame.location);
+         Serial.println(serialFrame.location);
          Serial.print("\n");
+
          
-         // swivelAngle
-//         serialFrame.swivelAngle = Serial.parseInt();
-//         serialFrame.swivelAngle = Serial.read();
-//         serialFrame.swivelAngle = serialFrame.swivelAngle & (Serial.read() << 8);
+
+         serialFrame.swivelAngle = Serial.parseInt();
+
          Serial.print("serialFrame.swivelAngle = ");
          Serial.println(serialFrame.swivelAngle);
          Serial.print("\n");
          
-         // titleAngle
-//         serialFrame.tiltAngle = Serial.parseInt();
-//         serialFrame.tiltAngle = Serial.read();  
-//         serialFrame.tiltAngle = serialFrame.tiltAngle & (Serial.read() << 8);
+
+         serialFrame.tiltAngle = Serial.parseInt();
          Serial.print("serialFrame.tiltAngle = ");
          Serial.println(serialFrame.tiltAngle);
          Serial.print("\n");
          
+
          // duration
-//         serialFrame.duration = Serial.parseFloat();
-//         serialFrame.duration = Serial.read();
-//         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 8);
-//         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 16);
-//         serialFrame.duration = (long) serialFrame.duration & (Serial.read() << 24);
+         serialFrame.duration = Serial.parseFloat();
+         
          Serial.print("serialFrame.duration = ");         
          Serial.println(serialFrame.duration);
          Serial.print("\n");
+         
+         keyFrames[numReadFrames] = serialFrame;
+         numReadFrames++;  
        }
+       
     }
-      
+    
+    #if DEBUG
+    Serial.print(" Received all keyframes \n");
+    #endif  
     // Loops through keyframe array, executes each transition in movement
-    for(int j = 0; j < 2; j++){
+    for(int j = 0; j < frameCount-1; j++){
       
       // Create index for "next" keyframe
       int k = j + 1;
       
       // Time during transition
-      float transitionTime = keyframesTest[k].duration - keyframesTest[j].duration;
+      float transitionTime = keyFrames[k].duration - keyFrames[j].duration;
       #if DEBUG
       Serial.print(transitionTime);
       Serial.print(" seconds\n");
       #endif
       
       // Distance covered during transition
-      float movementDistance = keyframesTest[k].location - keyframesTest[j].location;
+      float movementDistance = keyFrames[k].location - keyFrames[j].location;
       #if DEBUG
       Serial.print(movementDistance);
       Serial.print(" distance\n");
@@ -177,10 +180,9 @@ void loop() {
       // RPMs and the number of steps set for transition
       myStepper.setSpeed(RPM);  // Takes long
       myStepper.step(numSteps); // Takes int
-      delay(1000);
     }
     // Done executing movement
-    start = LOW;
+    //start = LOW;
    
   }
 }
