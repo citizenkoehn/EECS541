@@ -1,19 +1,36 @@
-// MultiStepper.pde
-// -*- mode: C++ -*-
+////////////////////////////////////////////////////////////////////////
 //
-// Shows how to multiple simultaneous steppers
-// Runs one stepper forwards and backwards, accelerating and decelerating
-// at the limits. Runs other steppers at the same time
+//  Arduino Stepper Motor Control Program
 //
-// Copyright (C) 2009 Mike McCauley
-// $Id: MultiStepper.pde,v 1.1 2011/01/05 01:51:01 mikem Exp mikem $
-
+//  Controls stepper motor movement (collection of "transitions") via
+//  keyframes inputted by the user.
+//
+//  Created on: 10/30/2105
+//  Created by: Pete Koehn, Brandon Teh, and Jim Stanton
+//  Last Modified on: 11/12/2015
+//  Last Modified by: All
+//
+//  Test Frames
+//  frameCount  position|swivelAngle|tiltAngle|duration
+//  4|  000.000|00000|00000|000.000|  001.000|00000|00000|010.000|  001.500|00000|00000|018.000|  002.500|00000|00000|033.000|
+//  4|  000.000|00000|00000|000.000|  002.000|00000|00000|010.000|  003.500|00000|00000|020.000|  007.500|00000|00000|050.000|
+//
+////////////////////////////////////////////////////////////////////////
+//
+//  AccelStepper Library:
+//  Copyright (C) 2009 Mike McCauley
+//  $Id: MultiStepper.pde,v 1.1 2011/01/05 01:51:01 mikem Exp mikem $
+//
+////////////////////////////////////////////////////////////////////////
 #include <AccelStepper.h>
+#include "GetKeyframes.h"
+#include "Calculations.h"
+#include "Execution.h"
 #define DEBUG 1
-#define CALCTIME 1 
+#define CALCTIME 1
 #define NumDigitsInt 5
 #define NumDigitsFloat 7
-#define NumDigitsKeyFrame ((2 * NumDigitsInt) + (2 * NumDigitsFloat) + 4) 
+#define NumDigitsKeyFrame ((2 * NumDigitsInt) + (2 * NumDigitsFloat) + 4)
 #define NumDigitsFrameCount 2
 
 // Define some steppers and the pins the will use
@@ -33,78 +50,78 @@ struct keyframe {
 int start = 1;
 
 void setup()
-{  
+{
   // Initialize the serial port:
   Serial.begin(9600);
 }
 
-void loop(){
-  
+void loop() {
+
   // Get keyframes
-  int frameCount = 0; 
-  if(start == HIGH){
+  int frameCount = 0;
+  if (start == HIGH) {
     Serial.print("Reading now\n");
-    unsigned int frameCount = 0;  
-    while(frameCount == 0){
-      if(Serial.available() == NumDigitsFrameCount){
-        frameCount = Serial.parseInt();       
+    unsigned int frameCount = 0;
+    while (frameCount == 0) {
+      if (Serial.available() == NumDigitsFrameCount) {
+        frameCount = Serial.parseInt();
       }
     }
 
     // Allocate keyframe structure
     struct keyframe *keyframes = (struct keyframe*) malloc(frameCount * sizeof(struct keyframe));
-    
-    #if DEBUG
+
+#if DEBUG
     Serial.print("read frameCount data\n");
-    #endif
-  
+#endif
+
     int numReadFrames = 0;
     struct keyframe serialFrame;
 
-    while(numReadFrames < frameCount){
-      
-      if(Serial.available() >= NumDigitsKeyFrame){ 
-         
+    while (numReadFrames < frameCount) {
+
+      if (Serial.available() >= NumDigitsKeyFrame) {
+
         // Read Location
         serialFrame.location = Serial.parseFloat();
-        #if DEBUG
+#if DEBUG
         Serial.print("serialFrame.location = ");
         Serial.println(serialFrame.location);
         //Serial.print("\n");
-        #endif
-        
+#endif
+
         // Read Swivel Angle
         serialFrame.swivelAngle = Serial.parseInt();
-        #if DEBUG
+#if DEBUG
         Serial.print("serialFrame.swivelAngle = ");
         Serial.println(serialFrame.swivelAngle);
         //Serial.print("\n");
-        #endif
-        
+#endif
+
         // Read Tilt Angle
         serialFrame.tiltAngle = Serial.parseInt();
-        #if DEBUG
+#if DEBUG
         Serial.print("serialFrame.tiltAngle = ");
         Serial.println(serialFrame.tiltAngle);
         //Serial.print("\n");
-        #endif
-        
+#endif
+
         // Read Duration
         serialFrame.duration = Serial.parseFloat();
-        #if DEBUG
-        Serial.print("serialFrame.duration = ");         
+#if DEBUG
+        Serial.print("serialFrame.duration = ");
         Serial.println(serialFrame.duration);
         Serial.print("\n");
-        #endif
-        
+#endif
+
         keyframes[numReadFrames] = serialFrame;
         numReadFrames++;
       }
     }
-    
-    #if DEBUG
+
+#if DEBUG
     Serial.println("Received all keyframes! \n");
-    #endif
+#endif
 
     ////////////////////////////////////////////////////////////////////
     // CALCULATIONS
@@ -112,30 +129,34 @@ void loop(){
     //    1 motor rotation = 0.1 m moved on track
     //    0.4 m = 4 rotations
     //    4 rotations / (8 seconds / (60 seconds/min)) = 30 rpm
-    //    (0.1 m) / (200 steps per revolution) = 0.0005 m (on track) / motor step -- THIS IS DETERMINED BY MOTOR  
+    //    (0.1 m) / (200 steps per revolution) = 0.0005 m (on track) / motor step -- THIS IS DETERMINED BY MOTOR
     //    0.4 m (on track) / 0.0005 m (movement on track / motor step) = 800 steps
     //    myStepper.setSpeed(30);
     //    myStepper.step(800);
     ////////////////////////////////////////////////////////////////////
-    
+
     const float trackDistPerRotation = 0.1;                     // Distance carriage moves on track per motor rotation
     const float trackDistPerStep = 0.1 / stepsPerRevolution;    // Distance carriage moves on track per motor step
-    const float tiltDegPerStep = 1.8;     // Range 0 to 60 degrees? Tilt below 0 degrees?
-    const float swivelDegPerStep = 1.8;   // -60 to 60 degrees with 0 straight ahead?
-    float numRotations = 0;    // Number of rotations required in transition
-    float posStepsPerSecond = 0;  // Number of steps per second of movement
-    float tiltStepsPerSecond = 0;  // Number of steps per second of movement
-    float swivelStepsPerSecond = 0;  // Number of steps per second of movement
-    int numSteps = 0;          // Number of steps required in transition
-    int RPM = 0;               // RPMs required for transition
+    const float tiltDegPerStep = 0.5;     // Polar Theta. Half-degree resolution? Will depend on gear ratios
+    const float tiltDegMax = 75.0;        // Range -20 to 75 degrees? Tilt below 0 degrees?
+    const float tiltDegMin = -20.0;
+    const float swivelDegPerStep = 0.5;   // Polar Phi: Half-degree resolution? Will depend on gear ratios
+    const float swivelDegMax = 60.0;      // Range -60 to 60 degrees with 0 straight ahead?
+    const float swivelDegMin = -60.0;
+    float numRotations = 0;           // Number of rotations required in transition
+    float posStepsPerSecond = 0;      // Number of steps per second of movement
+    float tiltStepsPerSecond = 0;     // Number of steps per second of movement
+    float swivelStepsPerSecond = 0;   // Number of steps per second of movement
+    int numSteps = 0;                 // Number of steps required in transition
+    int RPM = 0;                      // RPMs required for transition
 
     posStepper.setCurrentPosition(0);     // Resets position of stepper to zero
     tiltStepper.setCurrentPosition(0);    // Only once at beginning of movement?
     swivelStepper.setCurrentPosition(0);  // What if initial state is not zero (i.e. tilt of 45 deg)?
 
     // Loops through keyframes, execute transitions
-    for(int j = 0; j < frameCount - 1; j++){
-    
+    for (int j = 0; j < frameCount - 1; j++) {
+
       // Create index for "next" keyframe
       int k = j + 1;
 
@@ -144,78 +165,78 @@ void loop(){
       ////////////////////////////////////////////////////////////////
       // Distance covered during transition
       float locationDistance = keyframes[k].location - keyframes[j].location;
-      #if DEBUG
+#if DEBUG
       Serial.print("Distance to move: ");
       Serial.println(locationDistance);
-      #endif
-      
+#endif
+
       // Number of motor steps taken during transition
       float numPosSteps = locationDistance / trackDistPerStep;
-      #if DEBUG
+#if DEBUG
       Serial.print("Number of position steps\n");
       Serial.println(numPosSteps);
-      #endif
+#endif
 
       ////////////////////////////////////////////////////////////////
       // Tilt Calculations
       ////////////////////////////////////////////////////////////////
       // Degrees tilted during transition
       float tiltDegrees = keyframes[k].tiltAngle - keyframes[j].tiltAngle;
-      #if DEBUG
+#if DEBUG
       Serial.print("Degrees to tilt: ");
       Serial.println(tiltDegrees);
-      #endif
-      
+#endif
+
       // Number of motor steps taken during transition
       float numTiltSteps = tiltDegrees / tiltDegPerStep;
-      #if DEBUG
+#if DEBUG
       Serial.print("Number of tilt steps: ");
       Serial.println(numTiltSteps);
-      #endif
-      
+#endif
+
       ////////////////////////////////////////////////////////////////
       // Swivel Calculations
       ////////////////////////////////////////////////////////////////
       // Degrees swiveled during transition
       float swivelDegrees = keyframes[k].swivelAngle - keyframes[j].swivelAngle;
-      #if DEBUG
+#if DEBUG
       Serial.print("Degrees to swivel: ");
       Serial.println(swivelDegrees);
-      #endif
-      
+#endif
+
       // Number of motor steps taken during transition
       float numSwivelSteps = swivelDegrees / swivelDegPerStep;
-      #if DEBUG
+#if DEBUG
       Serial.print("Number of swivel steps: ");
       Serial.println(numSwivelSteps);
-      #endif
-      
+#endif
+
       ////////////////////////////////////////////////////////////////
       // Time Calculations
       ////////////////////////////////////////////////////////////////
       float transitionTime = keyframes[k].duration - keyframes[j].duration;
-      #if DEBUG
+#if DEBUG
       Serial.print("Seconds for movement: ");
       Serial.print(transitionTime);
-      #endif
+#endif
 
-      posStepsPerSecond = numPosSteps/transitionTime;
-      tiltStepsPerSecond = numTiltSteps/transitionTime;
-      swivelStepsPerSecond = numSwivelSteps/transitionTime;
+      posStepsPerSecond = numPosSteps / transitionTime;
+      tiltStepsPerSecond = numTiltSteps / transitionTime;
+      swivelStepsPerSecond = numSwivelSteps / transitionTime;
     }
 
     /////////////////////////////////////////////////////////////////////////
     // EXECUTION
     /////////////////////////////////////////////////////////////////////////
     posStepper.moveTo(keyframes->location);  // absolute position target. middle of track 0, ends are +/- 500 mm?
-    posStepper.setSpeed(posStepsPerSecond);    // steps/second
+    posStepper.setSpeed(posStepsPerSecond);  // steps/second
 
     tiltStepper.moveTo(keyframes->tiltAngle);
     tiltStepper.setSpeed(tiltStepsPerSecond);
-    
+
     swivelStepper.moveTo(keyframes->swivelAngle);
     swivelStepper.setSpeed(swivelStepsPerSecond);
-    
+
     posStepper.run();
     tiltStepper.run();
     swivelStepper.run();
