@@ -12,7 +12,7 @@
 //
 //  Test Frames
 //  frameCount  position|swivelAngle|tiltAngle|duration
-//  4|  000.000|00000|00000|000.000|  001.000|00000|00000|010.000|  001.500|00000|00000|018.000|  002.500|00000|00000|033.000|
+//  4|  000.000|00000|00000|000.000|  001.000|00030|00020|010.000|  001.500|00045|00025|018.000|  002.500|00030|00060|033.000|
 //  4|  000.000|00000|00000|000.000|  002.000|00000|00000|010.000|  003.500|00000|00000|020.000|  007.500|00000|00000|050.000|
 //
 ////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,7 @@
 #include "Calculations.h"
 #include "Execution.h"
 #define DEBUG 1
-#define CALCTIME 1
+#define CALCTIME 0
 #define NumDigitsInt 5
 #define NumDigitsFloat 7
 #define NumDigitsKeyFrame ((2 * NumDigitsInt) + (2 * NumDigitsFloat) + 4)
@@ -60,7 +60,7 @@ void loop() {
   // Get keyframes
   int frameCount = 0;
   if (start == HIGH) {
-    Serial.print("Reading now\n");
+    Serial.println("Reading now!\n");
     unsigned int frameCount = 0;
     while (frameCount == 0) {
       if (Serial.available() == NumDigitsFrameCount) {
@@ -166,6 +166,10 @@ void loop() {
       // Distance covered during transition
       float locationDistance = keyframes[k].location - keyframes[j].location;
 #if DEBUG
+      Serial.println("**************************************");
+      Serial.print("* Transition ");
+      Serial.println(k);
+      Serial.println("**************************************");
       Serial.print("Distance to move: ");
       Serial.println(locationDistance);
 #endif
@@ -173,7 +177,7 @@ void loop() {
       // Number of motor steps taken during transition
       float numPosSteps = locationDistance / trackDistPerStep;
 #if DEBUG
-      Serial.print("Number of position steps\n");
+      Serial.print("Number of position steps: ");
       Serial.println(numPosSteps);
 #endif
 
@@ -217,28 +221,62 @@ void loop() {
       float transitionTime = keyframes[k].duration - keyframes[j].duration;
 #if DEBUG
       Serial.print("Seconds for movement: ");
-      Serial.print(transitionTime);
+      Serial.println(transitionTime);
+      Serial.print("\n");
 #endif
 
       posStepsPerSecond = numPosSteps / transitionTime;
       tiltStepsPerSecond = numTiltSteps / transitionTime;
       swivelStepsPerSecond = numSwivelSteps / transitionTime;
+      
+      /////////////////////////////////////////////////////////////////////////
+      // EXECUTION
+      /////////////////////////////////////////////////////////////////////////    
+#if DEBUG
+      Serial.print("Position (keyframes->location): ");
+      Serial.println(keyframes[k].location);
+      Serial.print("Position Steps/Second: ");
+      Serial.println(posStepsPerSecond);
+#endif    
+      posStepper.moveTo(keyframes[k].location);  // absolute position target. middle of track 0, ends are +/- 500 mm?
+      posStepper.setSpeed(posStepsPerSecond);    // steps/second
+  
+#if DEBUG
+      Serial.print("Tilt Angle (keyframes->tiltAngle): ");
+      Serial.println(keyframes[k].tiltAngle);
+      Serial.print("Tilt Steps/Second: ");
+      Serial.println(tiltStepsPerSecond);
+#endif   
+      tiltStepper.moveTo(keyframes[k].tiltAngle);
+      tiltStepper.setSpeed(tiltStepsPerSecond);
+  
+#if DEBUG
+      Serial.print("Swivel Angle (keyframes->swivelAngle): ");
+      Serial.println(keyframes[k].swivelAngle);
+      Serial.print("Swivel Steps/Second: ");
+      Serial.println(swivelStepsPerSecond);
+      Serial.print("\n");
+#endif   
+      swivelStepper.moveTo(keyframes[k].swivelAngle);
+      swivelStepper.setSpeed(swivelStepsPerSecond);
+
+#if CALCTIME // Verify non-blocking function calls
+          // Average 27 ms between calls, less without print statements
+      Serial.print("Position Motor Run at: ");
+      Serial.println(millis());
+#endif      
+      posStepper.run(); // Execute transition
+#if CALCTIME
+      Serial.print("Tilt Motor Run at: ");
+      Serial.println(millis());
+#endif           
+      tiltStepper.run(); // Execute transition
+#if CALCTIME
+      Serial.print("Swivel Motor Run at: ");
+      Serial.println(millis());
+      Serial.print("\n");
+#endif           
+      swivelStepper.run(); // Execute transition
     }
-
-    /////////////////////////////////////////////////////////////////////////
-    // EXECUTION
-    /////////////////////////////////////////////////////////////////////////
-    posStepper.moveTo(keyframes->location);  // absolute position target. middle of track 0, ends are +/- 500 mm?
-    posStepper.setSpeed(posStepsPerSecond);  // steps/second
-
-    tiltStepper.moveTo(keyframes->tiltAngle);
-    tiltStepper.setSpeed(tiltStepsPerSecond);
-
-    swivelStepper.moveTo(keyframes->swivelAngle);
-    swivelStepper.setSpeed(swivelStepsPerSecond);
-
-    posStepper.run();
-    tiltStepper.run();
-    swivelStepper.run();
   }
 }
