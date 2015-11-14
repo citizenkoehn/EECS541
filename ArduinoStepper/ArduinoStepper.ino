@@ -25,8 +25,8 @@
 #define NumDigitsKeyFrame ((2 * NumDigitsInt) + (2 * NumDigitsFloat) + 4) 
 #define NumDigitsFrameCount 2
 
-Stepper myStepper(stepsPerRevolution, 8,9,10,11);  // Output pins to H-Bridge Driver
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
+Stepper myStepper(stepsPerRevolution, 8,9,10,11);  // Output pins to H-Bridge Driver
 const int dataPin = 13;              // Pin for serial keyframe data input
 const int startPin = 12;             // Pin indicating keyframes ready to be processed
 int start = 1;                       // Flag to process keyframes
@@ -190,7 +190,7 @@ void loop() {
 	  #if CALCTIME
 	  end = micros();
 	  elapsed = end - start; // Resolution of 8 us
-      Serial.println(elapsed) 
+    Serial.println(elapsed);
 	  #endif
 	  
       // RPMs and the number of steps set for transition
