@@ -27,7 +27,7 @@
 #include "Calculations.h"
 #include "Execution.h"
 #define DEBUG 1
-#define CALCTIME 0
+#define CALCTIME 1
 #define NumDigitsInt 5
 #define NumDigitsFloat 7
 #define NumDigitsKeyFrame ((2 * NumDigitsInt) + (2 * NumDigitsFloat) + 4)

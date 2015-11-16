@@ -1,0 +1,92 @@
+Reading now!
+
+read frameCount data
+serialFrame.location = 0.00
+serialFrame.swivelAngle = 0
+serialFrame.tiltAngle = 0
+serialFrame.duration = 0.00
+
+serialFrame.location = 1.00
+serialFrame.swivelAngle = 30
+serialFrame.tiltAngle = 20
+serialFrame.duration = 10.00
+
+serialFrame.location = 1.50
+serialFrame.swivelAngle = 45
+serialFrame.tiltAngle = 25
+serialFrame.duration = 18.00
+
+serialFrame.location = 2.50
+serialFrame.swivelAngle = 30
+serialFrame.tiltAngle = 60
+serialFrame.duration = 33.00
+
+Received all keyframes! 
+
+**************************************
+* Transition 1
+**************************************
+Distance to move: 1.00
+Number of position steps: 2000.00
+Degrees to tilt: 20.00
+Number of tilt steps: 40.00
+Degrees to swivel: 30.00
+Number of swivel steps: 60.00
+Seconds for movement: 10.00
+
+Position (keyframes->location): 1.00
+Position Steps/Second: 200.00
+Tilt Angle (keyframes->tiltAngle): 20
+Tilt Steps/Second: 4.00
+Swivel Angle (keyframes->swivelAngle): 30
+Swivel Steps/Second: 6.00
+
+Position Motor Run at: 5578
+Tilt Motor Run at: 5605
+Swivel Motor Run at: 5633
+
+**************************************
+* Transition 2
+**************************************
+Distance to move: 0.50
+Number of position steps: 1000.00
+Degrees to tilt: 5.00
+Number of tilt steps: 10.00
+Degrees to swivel: 15.00
+Number of swivel steps: 30.00
+Seconds for movement: 8.00
+
+Position (keyframes->location): 1.50
+Position Steps/Second: 125.00
+Tilt Angle (keyframes->tiltAngle): 25
+Tilt Steps/Second: 1.25
+Swivel Angle (keyframes->swivelAngle): 45
+Swivel Steps/Second: 3.75
+
+Position Motor Run at: 6180
+Tilt Motor Run at: 6207
+Swivel Motor Run at: 6235
+
+**************************************
+* Transition 3
+**************************************
+Distance to move: 1.00
+Number of position steps: 2000.00
+Degrees to tilt: 35.00
+Number of tilt steps: 70.00
+Degrees to swivel: -15.00
+Number of swivel steps: -30.00
+Seconds for movement: 15.00
+
+Position (keyframes->location): 2.50
+Position Steps/Second: 133.33
+Tilt Angle (keyframes->tiltAngle): 60
+Tilt Steps/Second: 4.67
+Swivel Angle (keyframes->swivelAngle): 30
+Swivel Steps/Second: -2.00
+
+Position Motor Run at: 6788
+Tilt Motor Run at: 6814
+Swivel Motor Run at: 6842
+
+Reading now!
