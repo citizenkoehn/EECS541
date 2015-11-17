@@ -12,6 +12,7 @@
 //
 //  Test Frames
 //  frameCount  position|swivelAngle|tiltAngle|duration
+//  2|  000.000|00000|00000|000.000|  001.000|00030|00020|005.000|
 //  4|  000.000|00000|00000|000.000|  001.000|00030|00020|010.000|  001.500|00045|00025|018.000|  002.500|00030|00060|033.000|
 //  4|  000.000|00000|00000|000.000|  002.000|00000|00000|010.000|  003.500|00000|00000|020.000|  007.500|00000|00000|050.000|
 //
@@ -34,9 +35,9 @@
 #define NumDigitsFrameCount 2
 
 // Define some steppers and the pins the will use
-AccelStepper posStepper(AccelStepper::FULL4WIRE, 2, 3, 4, 5);
-AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 6, 7, 8, 9);
-AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 10, 11, 12, 13);
+AccelStepper posStepper(AccelStepper::FULL4WIRE, 2, 3, 4, 5, false);
+AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 6, 7, 8, 9, false);
+AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 10, 11, 12, 13, false);
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
 
 // Keyframe structure. Use int/long instead of float for faster processing? Measurements in mm instead of m?
@@ -53,6 +54,8 @@ void setup()
 {
   // Initialize the serial port:
   Serial.begin(9600);
+  posStepper.setAcceleration(1000.0);
+  posStepper.setMaxSpeed(2000);
 }
 
 void loop() {
@@ -237,9 +240,9 @@ void loop() {
       Serial.println(keyframes[k].location);
       Serial.print("Position Steps/Second: ");
       Serial.println(posStepsPerSecond);
-#endif    
-      posStepper.moveTo(keyframes[k].location);  // absolute position target. middle of track 0, ends are +/- 500 mm?
-      posStepper.setSpeed(posStepsPerSecond);    // steps/second
+#endif
+      posStepper.move(2000);//numPosSteps
+      posStepper.setSpeed(400);    //posStepsPerSecond steps/second
   
 #if DEBUG
       Serial.print("Tilt Angle (keyframes->tiltAngle): ");
@@ -247,7 +250,7 @@ void loop() {
       Serial.print("Tilt Steps/Second: ");
       Serial.println(tiltStepsPerSecond);
 #endif   
-      tiltStepper.moveTo(keyframes[k].tiltAngle);
+      tiltStepper.move(numTiltSteps);
       tiltStepper.setSpeed(tiltStepsPerSecond);
   
 #if DEBUG
@@ -257,26 +260,29 @@ void loop() {
       Serial.println(swivelStepsPerSecond);
       Serial.print("\n");
 #endif   
-      swivelStepper.moveTo(keyframes[k].swivelAngle);
+      swivelStepper.move(numSwivelSteps);
       swivelStepper.setSpeed(swivelStepsPerSecond);
-
-#if CALCTIME // Verify non-blocking function calls
-          // Average 27 ms between calls, less without print statements
-      Serial.print("Position Motor Run at: ");
-      Serial.println(millis());
-#endif      
-      posStepper.run(); // Execute transition
-#if CALCTIME
-      Serial.print("Tilt Motor Run at: ");
-      Serial.println(millis());
-#endif           
-      tiltStepper.run(); // Execute transition
-#if CALCTIME
-      Serial.print("Swivel Motor Run at: ");
-      Serial.println(millis());
-      Serial.print("\n");
-#endif           
-      swivelStepper.run(); // Execute transition
+      
+      // Enable motors if utilized
+      if(posStepper.distanceToGo() != 0){
+        posStepper.enableOutputs();
+      }
+      if(posStepper.distanceToGo() != 0){
+        swivelStepper.enableOutputs();
+      }
+      if(posStepper.distanceToGo() != 0){
+        tiltStepper.enableOutputs();
+      }
+      // Run Motors
+      while(posStepper.distanceToGo() != 0){
+        posStepper.run(); // Execute transition
+        swivelStepper.run();
+        tiltStepper.run();
+      }
+      
+      posStepper.disableOutputs();
+      swivelStepper.disableOutputs();
+      tiltStepper.disableOutputs();
     }
   }
 }
