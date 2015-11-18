@@ -27,7 +27,7 @@
 #include "GetKeyframes.h"
 #include "Calculations.h"
 #include "Execution.h"
-#define DEBUG 1
+#define DEBUG 0 // when DEBUG is on there is delay in keyframes
 #define CALCTIME 1
 #define NumDigitsInt 5
 #define NumDigitsFloat 7
@@ -35,7 +35,7 @@
 #define NumDigitsFrameCount 2
 
 // Define some steppers and the pins the will use
-AccelStepper posStepper(AccelStepper::FULL4WIRE, 2, 3, 4, 5, false);
+AccelStepper posStepper(AccelStepper::FULL4WIRE, 2, 3, 4, 5);
 AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 6, 7, 8, 9, false);
 AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 10, 11, 12, 13, false);
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
@@ -54,7 +54,6 @@ void setup()
 {
   // Initialize the serial port:
   Serial.begin(9600);
-  posStepper.setAcceleration(1000.0);
   posStepper.setMaxSpeed(2000);
 }
 
@@ -152,6 +151,7 @@ void loop() {
     float swivelStepsPerSecond = 0;   // Number of steps per second of movement
     int numSteps = 0;                 // Number of steps required in transition
     int RPM = 0;                      // RPMs required for transition
+    int delete_me_number_of_runs = 0;
 
     posStepper.setCurrentPosition(0);     // Resets position of stepper to zero
     tiltStepper.setCurrentPosition(0);    // Only once at beginning of movement?
@@ -241,8 +241,8 @@ void loop() {
       Serial.print("Position Steps/Second: ");
       Serial.println(posStepsPerSecond);
 #endif
-      posStepper.move(2000);//numPosSteps
-      posStepper.setSpeed(400);    //posStepsPerSecond steps/second
+      posStepper.move(numPosSteps);
+      posStepper.setSpeed(posStepsPerSecond);
   
 #if DEBUG
       Serial.print("Tilt Angle (keyframes->tiltAngle): ");
@@ -275,9 +275,9 @@ void loop() {
       }
       // Run Motors
       while(posStepper.distanceToGo() != 0){
-        posStepper.run(); // Execute transition
-        swivelStepper.run();
-        tiltStepper.run();
+        posStepper.runSpeed(); // Execute transition
+	swivelStepper.runSpeed();
+        tiltStepper.runSpeed();
       }
       
       posStepper.disableOutputs();
