@@ -284,5 +284,6 @@ void loop() {
       swivelStepper.disableOutputs();
       tiltStepper.disableOutputs();
     }
+    free(keyframes);
   }
 }
