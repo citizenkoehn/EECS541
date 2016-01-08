@@ -11,10 +11,10 @@
 //  Last Modified by: All
 //
 //  Test Frames
-//  frameCount  position|swivelAngle|tiltAngle|duration
-//  2|  000.000|00000|00000|000.000|  001.000|00030|00020|005.000|
-//  4|  000.000|00000|00000|000.000|  001.000|00030|00020|010.000|  001.500|00045|00025|018.000|  002.500|00030|00060|033.000|
-//  4|  000.000|00000|00000|000.000|  002.000|00000|00000|010.000|  003.500|00000|00000|020.000|  007.500|00000|00000|050.000|
+//  frameCount  position (millimeters)|swivelAngle (degrees)|tiltAngle (degrees)|duration (milliseconds)
+//  2|  000000|000|00|000000|  001000|030|20|005000|
+//  4|  000000|000|00|000000|  001000|030|20|010000|  001500|045|25|018000|  002500|030|60|033000|
+//  4|  000000|000|00|000000|  002000|000|00|010000|  003500|000|00|020000|  007500|000|00|050000|
 //
 ////////////////////////////////////////////////////////////////////////
 //
@@ -23,26 +23,36 @@
 //  $Id: MultiStepper.pde,v 1.1 2011/01/05 01:51:01 mikem Exp mikem $
 //
 ////////////////////////////////////////////////////////////////////////
+// This version uses the internal data queing so you can treat it like Serial (kinda)!
 #include <AccelStepper.h>
 #include <SPI.h>
 #include "Adafruit_BLE_UART.h"
-#include "GetKeyframes.h"
-#include "Calculations.h"
-#include "Execution.h"
+//#include "GetKeyframes.h"
+//#include "Calculations.h"
+//#include "Execution.h"
 #define DEBUG 0 // when DEBUG is on there is delay in keyframes
 #define CALCTIME 1
 #define NumDigitsInt 5
 #define NumDigitsFloat 7
 #define NumDigitsKeyFrame ((2 * NumDigitsInt) + (2 * NumDigitsFloat) + 4)
 #define NumDigitsFrameCount 2
-#define ADAFRUITBLE_REQ 10
-#define ADAFRUITBLE_RDY 2
-#define ADAFRUITBLE_RST 9
 
-Adafruit_BLE_UART uart = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
+// Connect CLK/MISO/MOSI to hardware SPI
+// e.g. On UNO & compatible: CLK = 13, MISO = 12, MOSI = 11
+#define ADAFRUITBLE_REQ 10
+#define ADAFRUITBLE_RDY 2     // This should be an interrupt pin, on Uno thats #2 or #3
+#define ADAFRUITBLE_RST 9
+ 
+#define MAXSIZEKEYFRAME 21
+
+//Global test string to store buffer.
+//String test = "";
+
+Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
+
 
 // Define some steppers and the pins the will use
-//AccelStepper posStepper(AccelStepper::FULL4WIRE, 2, 3, 4, 5);
+AccelStepper posStepper(AccelStepper::FULL4WIRE, 4, 5, 6, 7);
 //AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 6, 7, 8, 9, false);
 //AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 10, 11, 12, 13, false);
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
@@ -55,75 +65,102 @@ struct keyframe {
   float duration;    // 4 bytes. Absolute time.
 };
 
-int start = 0;
+int start = 1;
 
-////////////////////////////////////////////////////////////////////////////
-//  This function is called whenever select ACI events happen
-////////////////////////////////////////////////////////////////////////////
-void aciCallback(aci_evt_opcode_t event)
-{
-  switch(event)
-  {
-    case ACI_EVT_DEVICE_STARTED:
-      Serial.println(F("Advertising started"));
-      break;
-    case ACI_EVT_CONNECTED:
-      Serial.println(F("Connected!"));
-      break;
-    case ACI_EVT_DISCONNECTED:
-      Serial.println(F("Disconnected or advertising timed out"));
-      break;
-    default:
-      break;
-  }
-}
-////////////////////////////////////////////////////////////////////////////
-//  This function is called whenever data arrives on the RX channel
-////////////////////////////////////////////////////////////////////////////
-void rxCallback(uint8_t *buffer, uint8_t len)
-{
-  Serial.print(F("Received "));
-  Serial.print(len);
-  Serial.print(F(" bytes: "));
-  for(int i=0; i<len; i++)
-   Serial.print((char)buffer[i]); 
-
-  Serial.print(F(" ["));
-
-  for(int i=0; i<len; i++)
-  {
-    Serial.print(" 0x"); Serial.print((char)buffer[i], HEX); 
-  }
-  Serial.println(F(" ]"));
-
-  /* Echo the same data back! */
-  uart.write(buffer, len);
-}
-
-void setup()
-{
-  // Initialize the serial port:
+/**************************************************************************/
+/*!
+    Configure the Arduino and start advertising with the radio
+*/
+/**************************************************************************/
+void setup(void)
+{ 
   Serial.begin(9600);
-//  posStepper.setMaxSpeed(2000);
+  //while(!Serial); // Leonardo/Micro should wait for serial init
+  Serial.println(F("Adafruit Bluefruit Low Energy nRF8001 Print echo demo"));
+  posStepper.setMaxSpeed(2000);
+  BTLEserial.setDeviceName("DSLR"); /* 7 characters max! */
 
-  uart.setRXcallback(rxCallback);
-  uart.setACIcallback(aciCallback);
-  // uart.setDeviceName("NEWNAME"); /* 7 characters max! */
-  uart.begin();
+  BTLEserial.begin();
 }
 
-void loop() {
-  
-  uart.pollACI();
-  
-  // Get keyframes
+/**************************************************************************/
+/*!
+    Constantly checks for new events on the nRF8001
+*/
+/**************************************************************************/
+aci_evt_opcode_t laststatus = ACI_EVT_DISCONNECTED;
+
+void loop()
+{
+  // Tell the nRF8001 to do whatever it should be working on.
+  BTLEserial.pollACI();
+
+  // Ask what is our current status
+  aci_evt_opcode_t status = BTLEserial.getState();
+  // If the status changed....
+  if (status != laststatus) {
+    // print it out!
+    if (status == ACI_EVT_DEVICE_STARTED) {
+        Serial.println(F("* Advertising started"));
+    }
+    if (status == ACI_EVT_CONNECTED) {
+        Serial.println(F("* Connected!"));
+    }
+    if (status == ACI_EVT_DISCONNECTED) {
+        Serial.println(F("* Disconnected or advertising timed out"));
+    }
+    // OK set the last status change to this one
+    laststatus = status;
+  }
+
+  if (status == ACI_EVT_CONNECTED) {
+    // Lets see if there's any data for us!
+    if (BTLEserial.available()) {
+      Serial.print("* "); Serial.print(BTLEserial.available()); Serial.println(F(" bytes available from BTLE"));
+    }
+    // OK while we still have something to read, get a character and print it out
+    
+    /*while (BTLEserial.available()) {
+      //char c = BTLEserial.read();
+      //Concatenate buffer characters to test string.
+      //test = test + c;
+      if(BTLEserial.size() >= MAXSIZEKEYFRAME){
+        BTLEserial.
+      }
+      Serial.print(c);
+    }*/
+
+    // Next up, see if we have any data to get from the Serial console
+
+    /*if (BTLEserial.available()) {
+      // Read a line from Serial
+      Serial.setTimeout(100); // 100 millisecond timeout
+      String s = Serial.readString();
+
+      // We need to convert the line to bytes, no more than 20 at this time
+      //uint8_t sendbuffer[20];
+      //s.getBytes(sendbuffer, 20);
+      //char sendbuffersize = min(20, s.length());
+
+      //Serial.print(F("\n* Sending -> \"")); Serial.print((char *)sendbuffer); Serial.println("\"");
+
+      // write the data
+      BTLEserial.write(sendbuffer, sendbuffersize);
+    }*/
+    
+    //Prints out the test string whenever it reaches a size of 31 bytes
+//    if(test.length() == MAXSIZEKEYFRAME){
+  //    Serial.println(test);
+      // Get keyframes
   int frameCount = 0;
   if (start == HIGH) {
     Serial.println("Reading now!\n");
     unsigned int frameCount = 0;
     while (frameCount == 0) {
-      if (Serial.available() == NumDigitsFrameCount) {
-        frameCount = Serial.parseInt();
+      BTLEserial.pollACI();
+      //Serial.println("Polling ACI1"
+      if (BTLEserial.available() >= NumDigitsFrameCount) { // watch for the == 
+        frameCount = BTLEserial.parseInt();
       }
     }
 
@@ -138,11 +175,12 @@ void loop() {
     struct keyframe serialFrame;
 
     while (numReadFrames < frameCount) {
-
-      if (Serial.available() >= NumDigitsKeyFrame) {
+      BTLEserial.pollACI();
+      //Serial.println(">> Polling ACI2 ");
+      if (BTLEserial.available() >= NumDigitsKeyFrame) {
 
         // Read Location
-        serialFrame.location = Serial.parseFloat();
+        serialFrame.location = BTLEserial.parseFloat();
 #if DEBUG
         Serial.print("serialFrame.location = ");
         Serial.println(serialFrame.location);
@@ -150,7 +188,7 @@ void loop() {
 #endif
 
         // Read Swivel Angle
-        serialFrame.swivelAngle = Serial.parseInt();
+        serialFrame.swivelAngle = BTLEserial.parseInt();
 #if DEBUG
         Serial.print("serialFrame.swivelAngle = ");
         Serial.println(serialFrame.swivelAngle);
@@ -158,7 +196,7 @@ void loop() {
 #endif
 
         // Read Tilt Angle
-        serialFrame.tiltAngle = Serial.parseInt();
+        serialFrame.tiltAngle = BTLEserial.parseInt();
 #if DEBUG
         Serial.print("serialFrame.tiltAngle = ");
         Serial.println(serialFrame.tiltAngle);
@@ -166,7 +204,7 @@ void loop() {
 #endif
 
         // Read Duration
-        serialFrame.duration = Serial.parseFloat();
+        serialFrame.duration = BTLEserial.parseFloat();
 #if DEBUG
         Serial.print("serialFrame.duration = ");
         Serial.println(serialFrame.duration);
@@ -210,7 +248,7 @@ void loop() {
     int RPM = 0;                      // RPMs required for transition
     int delete_me_number_of_runs = 0;
 
-//    posStepper.setCurrentPosition(0);     // Resets position of stepper to zero
+    posStepper.setCurrentPosition(0);     // Resets position of stepper to zero
 //    tiltStepper.setCurrentPosition(0);    // Only once at beginning of movement?
 //    swivelStepper.setCurrentPosition(0);  // What if initial state is not zero (i.e. tilt of 45 deg)?
 
@@ -239,6 +277,7 @@ void loop() {
 #if DEBUG
       Serial.print("Number of position steps: ");
       Serial.println(numPosSteps);
+     
 #endif
 
       ////////////////////////////////////////////////////////////////
@@ -286,8 +325,8 @@ void loop() {
 #endif
 
       posStepsPerSecond = numPosSteps / transitionTime;
-      tiltStepsPerSecond = numTiltSteps / transitionTime;
-      swivelStepsPerSecond = numSwivelSteps / transitionTime;
+      //tiltStepsPerSecond = numTiltSteps / transitionTime;
+      //swivelStepsPerSecond = numSwivelSteps / transitionTime;
       
       /////////////////////////////////////////////////////////////////////////
       // EXECUTION
@@ -298,8 +337,8 @@ void loop() {
       Serial.print("Position Steps/Second: ");
       Serial.println(posStepsPerSecond);
 #endif
-//      posStepper.move(numPosSteps);
-//      posStepper.setSpeed(posStepsPerSecond);
+      posStepper.move(numPosSteps);
+      posStepper.setSpeed(posStepsPerSecond);
   
 #if DEBUG
       Serial.print("Tilt Angle (keyframes->tiltAngle): ");
@@ -321,26 +360,27 @@ void loop() {
 //      swivelStepper.setSpeed(swivelStepsPerSecond);
       
 //      // Enable motors if utilized
-//      if(posStepper.distanceToGo() != 0){
-//        posStepper.enableOutputs();
-//      }
-//      if(posStepper.distanceToGo() != 0){
+      if(posStepper.distanceToGo() != 0){
+        posStepper.enableOutputs();
+      }
+      if(posStepper.distanceToGo() != 0){
 //        swivelStepper.enableOutputs();
-//      }
-//      if(posStepper.distanceToGo() != 0){
+      }
+      if(posStepper.distanceToGo() != 0){
 //        tiltStepper.enableOutputs();
-//      }
-//      // Run Motors
-//      while(posStepper.distanceToGo() != 0){
-//        posStepper.runSpeed(); // Execute transition
-//  swivelStepper.runSpeed();
-//        tiltStepper.runSpeed();
-//      }
+      }
+//      Run Motors
+      while(posStepper.distanceToGo() != 0){
+        posStepper.runSpeed(); // Execute transition
+//      swivelStepper.runSpeed();
+//      tiltStepper.runSpeed();
+      }
 //      
-//      posStepper.disableOutputs();
+      posStepper.disableOutputs();
 //      swivelStepper.disableOutputs();
 //      tiltStepper.disableOutputs();
     }
-    free(keyframes);
+    free(keyframes); 
+    }
   }
 }
