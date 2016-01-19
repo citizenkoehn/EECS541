@@ -45,16 +45,12 @@
  
 #define MAXSIZEKEYFRAME 21
 
-//Global test string to store buffer.
-//String test = "";
-
 Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
-
 
 // Define some steppers and the pins the will use
 AccelStepper posStepper(AccelStepper::FULL4WIRE, 22, 23, 24, 25);
 AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 28, 29, 30, 31);
-AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 36, 37, 38, 39);
+AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 34, 35, 36, 37);
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
 
 // Keyframe structure. Use int/long instead of float for faster processing? Measurements in mm instead of m?
@@ -76,8 +72,12 @@ void setup(void)
 { 
   Serial.begin(9600);
   //while(!Serial); // Leonardo/Micro should wait for serial init
-  Serial.println(F("Adafruit Bluefruit Low Energy nRF8001 Print echo demo"));
+  Serial.println(F("PB&J Automated Camera Dolly System"));
+  
   posStepper.setMaxSpeed(2000);
+  tiltStepper.setMaxSpeed(2000);
+  swivelStepper.setMaxSpeed(2000);
+  
   BTLEserial.setDeviceName("DSLR"); /* 7 characters max! */
 
   BTLEserial.begin();
@@ -139,13 +139,13 @@ void loop()
 #if DEBUG
     Serial.print("read frameCount data\n");
 #endif
-
+    
+    // Get keyframes
     int numReadFrames = 0;
     struct keyframe serialFrame;
 
     while (numReadFrames < frameCount) {
       BTLEserial.pollACI();
-      //Serial.println(">> Polling ACI2 ");
       if (BTLEserial.available() >= NumDigitsKeyFrame) {
 
         // Read Location
@@ -153,7 +153,6 @@ void loop()
 #if DEBUG
         Serial.print("serialFrame.location = ");
         Serial.println(serialFrame.location);
-        //Serial.print("\n");
 #endif
 
         // Read Swivel Angle
@@ -161,7 +160,6 @@ void loop()
 #if DEBUG
         Serial.print("serialFrame.swivelAngle = ");
         Serial.println(serialFrame.swivelAngle);
-        //Serial.print("\n");
 #endif
 
         // Read Tilt Angle
@@ -169,7 +167,6 @@ void loop()
 #if DEBUG
         Serial.print("serialFrame.tiltAngle = ");
         Serial.println(serialFrame.tiltAngle);
-        //Serial.print("\n");
 #endif
 
         // Read Duration
@@ -215,11 +212,10 @@ void loop()
     float swivelStepsPerSecond = 0;   // Number of steps per second of movement
     int numSteps = 0;                 // Number of steps required in transition
     int RPM = 0;                      // RPMs required for transition
-    int delete_me_number_of_runs = 0;
 
     posStepper.setCurrentPosition(0);     // Resets position of stepper to zero
-//    tiltStepper.setCurrentPosition(0);    // Only once at beginning of movement?
-//    swivelStepper.setCurrentPosition(0);  // What if initial state is not zero (i.e. tilt of 45 deg)?
+    tiltStepper.setCurrentPosition(0);    // Only once at beginning of movement?
+    swivelStepper.setCurrentPosition(0);  // What if initial state is not zero (i.e. tilt of 45 deg)?
 
     // Loops through keyframes, execute transitions
     for (int j = 0; j < frameCount - 1; j++) {
@@ -294,8 +290,8 @@ void loop()
 #endif
 
       posStepsPerSecond = numPosSteps / transitionTime;
-      //tiltStepsPerSecond = numTiltSteps / transitionTime;
-      //swivelStepsPerSecond = numSwivelSteps / transitionTime;
+      tiltStepsPerSecond = numTiltSteps / transitionTime;
+      swivelStepsPerSecond = numSwivelSteps / transitionTime;
       
       /////////////////////////////////////////////////////////////////////////
       // EXECUTION
@@ -315,8 +311,8 @@ void loop()
       Serial.print("Tilt Steps/Second: ");
       Serial.println(tiltStepsPerSecond);
 #endif   
-//      tiltStepper.move(numTiltSteps);
-//      tiltStepper.setSpeed(tiltStepsPerSecond);
+      tiltStepper.move(numTiltSteps);
+      tiltStepper.setSpeed(tiltStepsPerSecond);
   
 #if DEBUG
       Serial.print("Swivel Angle (keyframes->swivelAngle): ");
@@ -325,30 +321,31 @@ void loop()
       Serial.println(swivelStepsPerSecond);
       Serial.print("\n");
 #endif   
-//      swivelStepper.move(numSwivelSteps);
-//      swivelStepper.setSpeed(swivelStepsPerSecond);
+      swivelStepper.move(numSwivelSteps);
+      swivelStepper.setSpeed(swivelStepsPerSecond);
       
-//      // Enable motors if utilized
+      // Enable motors if utilized
       if(posStepper.distanceToGo() != 0){
         posStepper.enableOutputs();
       }
       if(posStepper.distanceToGo() != 0){
-//        swivelStepper.enableOutputs();
+        swivelStepper.enableOutputs();
       }
       if(posStepper.distanceToGo() != 0){
-//        tiltStepper.enableOutputs();
+        tiltStepper.enableOutputs();
       }
-//      Run Motors
+      // Run Motors
       while(posStepper.distanceToGo() != 0){
-        posStepper.runSpeed(); // Execute transition
-//      swivelStepper.runSpeed();
-//      tiltStepper.runSpeed();
+        posStepper.runSpeed();
+        swivelStepper.runSpeed();
+        tiltStepper.runSpeed();
       }
-//      
+
       posStepper.disableOutputs();
-//      swivelStepper.disableOutputs();
-//      tiltStepper.disableOutputs();
+      swivelStepper.disableOutputs();
+      tiltStepper.disableOutputs();
     }
+    
     free(keyframes); 
     }
   }
