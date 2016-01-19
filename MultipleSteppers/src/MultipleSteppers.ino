@@ -30,7 +30,7 @@
 //#include "GetKeyframes.h"
 //#include "Calculations.h"
 //#include "Execution.h"
-#define DEBUG 0 // when DEBUG is on there is delay in keyframes
+#define DEBUG 1 // when DEBUG is on there is delay in keyframes
 #define CALCTIME 1
 #define NumDigitsInt 5
 #define NumDigitsFloat 7
@@ -52,9 +52,9 @@ Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RD
 
 
 // Define some steppers and the pins the will use
-AccelStepper posStepper(AccelStepper::FULL4WIRE, 4, 5, 6, 7);
-//AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 6, 7, 8, 9, false);
-//AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 10, 11, 12, 13, false);
+AccelStepper posStepper(AccelStepper::FULL4WIRE, 22, 23, 24, 25);
+AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 28, 29, 30, 31);
+AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 36, 37, 38, 39);
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
 
 // Keyframe structure. Use int/long instead of float for faster processing? Measurements in mm instead of m?
@@ -120,38 +120,7 @@ void loop()
     }
     // OK while we still have something to read, get a character and print it out
     
-    /*while (BTLEserial.available()) {
-      //char c = BTLEserial.read();
-      //Concatenate buffer characters to test string.
-      //test = test + c;
-      if(BTLEserial.size() >= MAXSIZEKEYFRAME){
-        BTLEserial.
-      }
-      Serial.print(c);
-    }*/
-
-    // Next up, see if we have any data to get from the Serial console
-
-    /*if (BTLEserial.available()) {
-      // Read a line from Serial
-      Serial.setTimeout(100); // 100 millisecond timeout
-      String s = Serial.readString();
-
-      // We need to convert the line to bytes, no more than 20 at this time
-      //uint8_t sendbuffer[20];
-      //s.getBytes(sendbuffer, 20);
-      //char sendbuffersize = min(20, s.length());
-
-      //Serial.print(F("\n* Sending -> \"")); Serial.print((char *)sendbuffer); Serial.println("\"");
-
-      // write the data
-      BTLEserial.write(sendbuffer, sendbuffersize);
-    }*/
-    
-    //Prints out the test string whenever it reaches a size of 31 bytes
-//    if(test.length() == MAXSIZEKEYFRAME){
-  //    Serial.println(test);
-      // Get keyframes
+   
   int frameCount = 0;
   if (start == HIGH) {
     Serial.println("Reading now!\n");
