@@ -71,7 +71,7 @@ int start = 1;
 void setup(void)
 { 
   Serial.begin(9600);
-  //while(!Serial); // Leonardo/Micro should wait for serial init
+ 
   Serial.println(F("PB&J Automated Camera Dolly System"));
   
   posStepper.setMaxSpeed(2000);
@@ -101,7 +101,7 @@ void loop()
   if (status != laststatus) {
     // print it out!
     if (status == ACI_EVT_DEVICE_STARTED) {
-        Serial.println(F("* Advertising started"));
+        Serial.println(F("* Advertising started")); 
     }
     if (status == ACI_EVT_CONNECTED) {
         Serial.println(F("* Connected!"));
@@ -150,28 +150,27 @@ void loop()
 
         // Read Location
         serialFrame.location = BTLEserial.parseFloat();
-#if DEBUG
-        Serial.print("serialFrame.location = ");
-        Serial.println(serialFrame.location);
-#endif
 
         // Read Swivel Angle
         serialFrame.swivelAngle = BTLEserial.parseInt();
-#if DEBUG
-        Serial.print("serialFrame.swivelAngle = ");
-        Serial.println(serialFrame.swivelAngle);
-#endif
 
         // Read Tilt Angle
         serialFrame.tiltAngle = BTLEserial.parseInt();
-#if DEBUG
-        Serial.print("serialFrame.tiltAngle = ");
-        Serial.println(serialFrame.tiltAngle);
-#endif
 
         // Read Duration
         serialFrame.duration = BTLEserial.parseFloat();
+
+//Statements to print location, swivelAngle, tiltAngle, and duration.
 #if DEBUG
+        Serial.print("serialFrame.location = ");
+        Serial.println(serialFrame.location);
+        
+        Serial.print("serialFrame.swivelAngle = ");
+        Serial.println(serialFrame.swivelAngle);
+        
+        Serial.print("serialFrame.tiltAngle = ");
+        Serial.println(serialFrame.tiltAngle);
+        
         Serial.print("serialFrame.duration = ");
         Serial.println(serialFrame.duration);
         Serial.print("\n");
@@ -191,11 +190,8 @@ void loop()
     // Example: Want 0.4 m in 8 seconds
     //    1 motor rotation = 0.1 m moved on track
     //    0.4 m = 4 rotations
-    //    4 rotations / (8 seconds / (60 seconds/min)) = 30 rpm
     //    (0.1 m) / (200 steps per revolution) = 0.0005 m (on track) / motor step -- THIS IS DETERMINED BY MOTOR
     //    0.4 m (on track) / 0.0005 m (movement on track / motor step) = 800 steps
-    //    myStepper.setSpeed(30);
-    //    myStepper.step(800);
     ////////////////////////////////////////////////////////////////////
 
     const float trackDistPerRotation = 0.1;                     // Distance carriage moves on track per motor rotation
@@ -210,8 +206,6 @@ void loop()
     float posStepsPerSecond = 0;      // Number of steps per second of movement
     float tiltStepsPerSecond = 0;     // Number of steps per second of movement
     float swivelStepsPerSecond = 0;   // Number of steps per second of movement
-    int numSteps = 0;                 // Number of steps required in transition
-    int RPM = 0;                      // RPMs required for transition
 
     posStepper.setCurrentPosition(0);     // Resets position of stepper to zero
     tiltStepper.setCurrentPosition(0);    // Only once at beginning of movement?
@@ -228,66 +222,32 @@ void loop()
       ////////////////////////////////////////////////////////////////
       // Distance covered during transition
       float locationDistance = keyframes[k].location - keyframes[j].location;
-#if DEBUG
-      Serial.println("**************************************");
-      Serial.print("* Transition ");
-      Serial.println(k);
-      Serial.println("**************************************");
-      Serial.print("Distance to move: ");
-      Serial.println(locationDistance);
-#endif
 
       // Number of motor steps taken during transition
       float numPosSteps = locationDistance / trackDistPerStep;
-#if DEBUG
-      Serial.print("Number of position steps: ");
-      Serial.println(numPosSteps);
-     
-#endif
 
       ////////////////////////////////////////////////////////////////
       // Tilt Calculations
       ////////////////////////////////////////////////////////////////
       // Degrees tilted during transition
       float tiltDegrees = keyframes[k].tiltAngle - keyframes[j].tiltAngle;
-#if DEBUG
-      Serial.print("Degrees to tilt: ");
-      Serial.println(tiltDegrees);
-#endif
 
       // Number of motor steps taken during transition
       float numTiltSteps = tiltDegrees / tiltDegPerStep;
-#if DEBUG
-      Serial.print("Number of tilt steps: ");
-      Serial.println(numTiltSteps);
-#endif
 
       ////////////////////////////////////////////////////////////////
       // Swivel Calculations
       ////////////////////////////////////////////////////////////////
       // Degrees swiveled during transition
       float swivelDegrees = keyframes[k].swivelAngle - keyframes[j].swivelAngle;
-#if DEBUG
-      Serial.print("Degrees to swivel: ");
-      Serial.println(swivelDegrees);
-#endif
 
       // Number of motor steps taken during transition
       float numSwivelSteps = swivelDegrees / swivelDegPerStep;
-#if DEBUG
-      Serial.print("Number of swivel steps: ");
-      Serial.println(numSwivelSteps);
-#endif
 
       ////////////////////////////////////////////////////////////////
       // Time Calculations
       ////////////////////////////////////////////////////////////////
       float transitionTime = keyframes[k].duration - keyframes[j].duration;
-#if DEBUG
-      Serial.print("Seconds for movement: ");
-      Serial.println(transitionTime);
-      Serial.print("\n");
-#endif
 
       posStepsPerSecond = numPosSteps / transitionTime;
       tiltStepsPerSecond = numTiltSteps / transitionTime;
@@ -295,32 +255,14 @@ void loop()
       
       /////////////////////////////////////////////////////////////////////////
       // EXECUTION
-      /////////////////////////////////////////////////////////////////////////    
-#if DEBUG
-      Serial.print("Position (keyframes->location): ");
-      Serial.println(keyframes[k].location);
-      Serial.print("Position Steps/Second: ");
-      Serial.println(posStepsPerSecond);
-#endif
+      /////////////////////////////////////////////////////////////////////////
+      
       posStepper.move(numPosSteps);
       posStepper.setSpeed(posStepsPerSecond);
-  
-#if DEBUG
-      Serial.print("Tilt Angle (keyframes->tiltAngle): ");
-      Serial.println(keyframes[k].tiltAngle);
-      Serial.print("Tilt Steps/Second: ");
-      Serial.println(tiltStepsPerSecond);
-#endif   
+     
       tiltStepper.move(numTiltSteps);
       tiltStepper.setSpeed(tiltStepsPerSecond);
-  
-#if DEBUG
-      Serial.print("Swivel Angle (keyframes->swivelAngle): ");
-      Serial.println(keyframes[k].swivelAngle);
-      Serial.print("Swivel Steps/Second: ");
-      Serial.println(swivelStepsPerSecond);
-      Serial.print("\n");
-#endif   
+     
       swivelStepper.move(numSwivelSteps);
       swivelStepper.setSpeed(swivelStepsPerSecond);
       
@@ -344,6 +286,54 @@ void loop()
       posStepper.disableOutputs();
       swivelStepper.disableOutputs();
       tiltStepper.disableOutputs();
+      
+      /////////////////////////////////////////////////////////////////////////
+      // DEBUG
+      /////////////////////////////////////////////////////////////////////////
+#if DEBUG
+      Serial.println("**************************************");
+      Serial.print("* Transition ");
+      Serial.println(k);
+      Serial.println("**************************************");
+      Serial.print("Distance to move: ");
+      Serial.println(locationDistance);
+      
+      Serial.print("Number of position steps: ");
+      Serial.println(numPosSteps);
+      
+      Serial.print("Degrees to tilt: ");
+      Serial.println(tiltDegrees);
+      
+      Serial.print("Number of tilt steps: ");
+      Serial.println(numTiltSteps);
+      
+      Serial.print("Degrees to swivel: ");
+      Serial.println(swivelDegrees);
+      
+      Serial.print("Number of swivel steps: ");
+      Serial.println(numSwivelSteps);
+      
+      Serial.print("Seconds for movement: ");
+      Serial.println(transitionTime);
+      Serial.print("\n");
+      
+      //Execution
+      Serial.print("Position (keyframes->location): ");
+      Serial.println(keyframes[k].location);
+      Serial.print("Position Steps/Second: ");
+      Serial.println(posStepsPerSecond);
+      
+      Serial.print("Tilt Angle (keyframes->tiltAngle): ");
+      Serial.println(keyframes[k].tiltAngle);
+      Serial.print("Tilt Steps/Second: ");
+      Serial.println(tiltStepsPerSecond);
+      
+      Serial.print("Swivel Angle (keyframes->swivelAngle): ");
+      Serial.println(keyframes[k].swivelAngle);
+      Serial.print("Swivel Steps/Second: ");
+      Serial.println(swivelStepsPerSecond);
+      Serial.print("\n");
+#endif
     }
     
     free(keyframes); 
