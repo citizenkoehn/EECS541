@@ -10,6 +10,8 @@
 //  Last Modified on: 11/12/2015
 //  Last Modified by: All
 //
+//  *IMPORTANT* nrf8001 Bluetooth board only takes in 20 bytes of data in 1 chunk. *IMPORTANT*
+//
 //  Test Frames
 //  frameCount  position (millimeters)|swivelAngle (degrees)|tiltAngle (degrees)|duration (milliseconds)
 //  2|  000000|000|00|000000|  001000|030|20|005000|
