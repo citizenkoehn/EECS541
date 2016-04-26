@@ -50,9 +50,9 @@
 Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
 
 // Define some steppers and the pins the will use
-AccelStepper posStepper(AccelStepper::FULL4WIRE, 22, 23, 24, 25);
-AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 28, 29, 30, 31);
-AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 34, 35, 36, 37);
+AccelStepper posStepper(AccelStepper::FULL4WIRE, 42, 40, 38, 36);
+AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 22, 24, 26, 44);
+AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 28, 30, 32, 34);
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
 
 // Keyframe structure. Use int/long instead of float for faster processing? Measurements in mm instead of m?
