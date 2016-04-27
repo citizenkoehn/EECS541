@@ -196,8 +196,7 @@ void loop()
     //    0.4 m (on track) / 0.0005 m (movement on track / motor step) = 800 steps
     ////////////////////////////////////////////////////////////////////
 
-    const float trackDistPerRotation = 0.1;                     // Distance carriage moves on track per motor rotation
-    const float trackDistPerStep = 0.1 / stepsPerRevolution;    // Distance carriage moves on track per motor step
+    const float trackDistPerStep =  0.182; // Distance carriage moves on track per motor step
     const float tiltDegPerStep = 0.5;     // Polar Theta. Half-degree resolution? Will depend on gear ratios
     const float tiltDegMax = 75.0;        // Range -20 to 75 degrees? Tilt below 0 degrees?
     const float tiltDegMin = -20.0;
