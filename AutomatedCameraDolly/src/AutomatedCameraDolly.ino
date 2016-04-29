@@ -267,22 +267,29 @@ void loop()
       swivelStepper.move(numSwivelSteps);
       swivelStepper.setSpeed(swivelStepsPerSecond);
       
-      // Enable motors if utilized
-      if(posStepper.distanceToGo() != 0){
-        posStepper.enableOutputs();
-      }
-      if(posStepper.distanceToGo() != 0){
-        swivelStepper.enableOutputs();
-      }
-      if(posStepper.distanceToGo() != 0){
-        tiltStepper.enableOutputs();
-      }
+      bool anyDistanceLeft = true;
+
       // Run Motors
-      while(posStepper.distanceToGo() != 0){
-        posStepper.runSpeed();
-        swivelStepper.runSpeed();
-        tiltStepper.runSpeed();
+      while(anyDistanceLeft){
+         //  Enable motors if utilized
+        anyDistanceLeft = false;
+        if(posStepper.distanceToGo() != 0){
+          posStepper.enableOutputs();
+          anyDistanceLeft = true;
+          posStepper.runSpeed();   
+        }
+        if(swivelStepper.distanceToGo() != 0){
+          swivelStepper.enableOutputs();
+          anyDistanceLeft = true;
+          swivelStepper.runSpeed();
+        }
+        if(tiltStepper.distanceToGo() != 0){
+          tiltStepper.enableOutputs();
+          anyDistanceLeft = true;
+          tiltStepper.runSpeed();
+        }
       }
+  
 
       posStepper.disableOutputs();
       swivelStepper.disableOutputs();
