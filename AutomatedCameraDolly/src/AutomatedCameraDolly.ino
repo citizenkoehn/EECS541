@@ -51,8 +51,8 @@ Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RD
 
 // Define some steppers and the pins the will use
 AccelStepper posStepper(AccelStepper::FULL4WIRE, 42, 40, 38, 36);
-AccelStepper tiltStepper(AccelStepper::FULL4WIRE, 44, 24, 26);
-AccelStepper swivelStepper(AccelStepper::FULL4WIRE, 28, 30, 32, 34);
+AccelStepper tiltStepper(AccelStepper::HALF4WIRE, 44, 22, 24, 26);
+AccelStepper swivelStepper(AccelStepper::HALF4WIRE, 28, 30, 32, 34);
 const int stepsPerRevolution = 200;  // Number of steps per revolution. Motor specification.
 
 // Keyframe structure. Use int/long instead of float for faster processing? Measurements in mm instead of m?
@@ -197,10 +197,10 @@ void loop()
     ////////////////////////////////////////////////////////////////////
 
     const float trackDistPerStep =  0.182; // Distance carriage moves on track per motor step
-    const float tiltDegPerStep = 1.8;     // Polar Theta. Half-degree resolution? Will depend on gear ratios
+    const float tiltDegPerStep = 0.9;     // Polar Theta. Half-degree resolution? Will depend on gear ratios
     const float tiltDegMax = 75.0;        // Range -20 to 75 degrees? Tilt below 0 degrees?
     const float tiltDegMin = -20.0;
-    const float swivelDegPerStep = 1.8;   // Polar Phi: Half-degree resolution? Will depend on gear ratios
+    const float swivelDegPerStep = 0.9;   // Polar Phi: Half-degree resolution? Will depend on gear ratios
     const float swivelDegMax = 60.0;      // Range -60 to 60 degrees with 0 straight ahead?
     const float swivelDegMin = -60.0;
     float numRotations = 0;           // Number of rotations required in transition
